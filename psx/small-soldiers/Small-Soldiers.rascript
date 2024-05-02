@@ -9,9 +9,6 @@ DifficultyLookup = {
     2: "Hard",
 }
 
-MusicVolumeAddress = 0x0393C6 //0x7f = Max
-MusicStatusAddress = 0x0393C7 //0 = Stereo, 1 = Mono, 2 = Off
-
 // Cheats
 CheatInvincibilityAddress = 0x0393d8
 CheatAllWeaponsAddress = 0x0393d9
@@ -71,9 +68,11 @@ LevelSecrets = {
 
 LevelStatsPointer = 0x0A1D1C
 LevelStatsOffsets = {
-    "vehicle": 0x2c, //24-bit pointer
+    "time": 0x0028,
+    "vehicle": 0x002c, //24-bit pointer
     "lives": 0x02e4,
     "kills": 0x0388,
+    "weapon_cooldown": 0x03a0,
     "equipped_weapon": 0x03ae,
     "green_ammo": 0x03ac,
     "blue_ammo": 0x03ae,
@@ -97,28 +96,48 @@ ScreenLookup = {
     "options_sound": 0x595818,
     "credits": 0x565702,
     "summary": 0x554118,
-    //levels
-    1: 0x823,
-    2: 0x4819
+}
+
+LevelScreen = {
+    0: 0x0823,
+    1: 0x4819,
+    2: 0x5726,
+    3: 0x0735,
+    4: 0x2138,
+    5: 0x4430,
+    6: 0x0, //TODO
+    7: 0x0, //TODO
+    8: 0x0, //TODO
+    9: 0x0, //TODO
+    10: 0x0, //TODO
+    11: 0x0, //TODO
+    12: 0x0, //TODO
+    13: 0x0, //TODO
 }
 
 VideoAddress = 0x1FFE79
 
 function is_current_screen(screen) {
-    return dword(ScreenAddress) == ScreenLookup[screen]
+    return dword(ScreenAddress) == screen
 }
-IS_SCREEN = any_of(ScreenLookup, is_current_screen)
+function is_previous_screen(screen) {
+    return prev(dword(ScreenAddress)) == screen
+}
+//IS_SCREEN = any_of(ScreenLookup, is_current_screen)
 
-IS_1P = byte(ModeAddress) == 0
-IS_HARD = byte(DifficultyAddress) == 2
-LEVEL_CHANGED = byte(LevelAddress) != prev(byte(LevelAddress))
-LEVEL_PROGRESS = byte(LevelAddress) == prev(byte(LevelAddress)+1)
-NO_PASSWORDS = disable_when(is_current_screen("password") && LEVEL_CHANGED, is_current_screen("main"))
-NO_CHEATS = byte(CheatInvincibilityAddress) == 0 && byte(CheatAllWeaponsAddress) == 0 && byte(CheatUnlimitedAmmoAddress) == 0
+// utility functions
+function is_1P() => byte(ModeAddress) == 0
+function is_hard() => byte(DifficultyAddress) == 2
+function has_level_changed() => byte(LevelAddress) != prev(byte(LevelAddress))
+function has_level_increased() => byte(LevelAddress) == prev(byte(LevelAddress)+1)
+function no_passwords() => disable_when(is_current_screen(ScreenLookup["password"]) && has_level_changed(), is_current_screen(ScreenLookup["main"]))
+function no_cheats() => byte(CheatInvincibilityAddress) == 0 && byte(CheatAllWeaponsAddress) == 0 && byte(CheatUnlimitedAmmoAddress) == 0
+function is_scenario() => is_1P() && no_cheats()
+function is_campaign() => is_1P() && no_passwords() && no_cheats()
 
 function last_level_completed() {
     return 
-        IS_1P && NO_PASSWORDS && NO_CHEATS &&
+        is_1P() && no_passwords() && no_cheats() &&
         is_current_level(length(LevelLookup)-1) && 
         ascii_string_equals(VideoAddress, "end.str") //last level doesn't have a summary screen
 }
@@ -128,8 +147,7 @@ function level_completed(level) {
         return last_level_completed()
     }
     return 
-        IS_1P && NO_PASSWORDS && NO_CHEATS &&
-        LEVEL_PROGRESS && is_current_level(level+1) && is_current_screen("summary")
+        has_level_increased() && is_current_level(level+1) && is_current_screen(ScreenLookup["summary"])
 }
 
 function collected_secrets(level) {
@@ -146,25 +164,9 @@ function collected_secrets(level) {
     prev_total_secrets = prev_secrets + prev_talismans
     
     return 
-        IS_1P && NO_CHEATS && is_current_level(level) && 
         current_total_secrets == target_secrets &&
         prev_total_secrets == target_secrets - 1
 }
-
-// AchievementsIds = {
-//     "progression": [419778, 419779, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-//     "hard": [419799, 0, 0, 0, ],
-//     "collectables": [419792, 0, 0, 0],
-//     "no_death": [0, 0, 0, 0],
-//     "challenge": [0, 0, 0, 0]
-// }
-
-// function get_id(type, level) {
-//     if (level >= length(AchievementsIds[type])) {
-//         return 0
-//     }
-//     return AchievementsIds[type][level]
-// }
 
 Titles = {
     "progression": {
@@ -236,7 +238,7 @@ for level in LevelLookup {
         points = Points["progression"][level],
         type = progressionType,
         description = "Complete " + LevelLookup[level] + " on any difficulty (no passwords)",
-        trigger = level_completed(level)
+        trigger = is_campaign() && level_completed(level)
     )
 
     // Progression Hard mode
@@ -245,7 +247,7 @@ for level in LevelLookup {
         points = Points["hard"][level],
         // technically redundant since passwords automatically set difficulty to normal
         description = "Complete " + LevelLookup[level] + " on Hard difficulty (no passwords)",
-        trigger = level_completed(level) && IS_HARD
+        trigger = is_campaign() && level_completed(level) && is_hard()
     )
 
     // Collectables
@@ -253,40 +255,51 @@ for level in LevelLookup {
         title = Titles["collectables"][level],
         points = Points["collectables"][level],
         description = "Collect all secrets and talismans in " + LevelLookup[level],
-        trigger = collected_secrets(level)
+        trigger = is_scenario() && is_current_level(level) && collected_secrets(level)
     )
 
     // No-death
-    // TODO: allow passwords?
     // Note: No-death is always achieved on last level because if you die the boss returns to full health
     if(level != length(LevelLookup)-1) {
         achievement(
             title = Titles["no_death"][level],
             points = Points["no_death"][level],
             description = "Complete " + LevelLookup[level] + " without dying",
-            trigger = level_completed(level) && byte(TriesAddress) == 1
+            trigger = is_scenario() && level_completed(level) && byte(TriesAddress) == 1
         )
     }
 }
 
-// Level challenges
-    // level 1: 
-    // TODO
-    // something about insaniac
-    // speedrun
-    
-    // level 2:
-    // complete the level without killing any enemies
+// extra challenges
+// level 1: 
+// kill all enemies
 achievement(
-    title = "The Gorgonites are peaceful. We mean no harm.",
-    points = 3,
-    description = "Complete Dimensional Temple without killing any enemies",
-    trigger = level_completed(1) && byte(LevelStats("kills")) == 0
+    title = "Beware. There will be no mercy.",
+    points = 3, // TODO
+    description = "Kill all enemies in " + LevelLookup[0] + " and complete the level",
+    trigger = is_scenario() && level_completed(0) && byte(LevelStats("kills")) == 21
 )
 
-    // level 3:
-    // TODO
-    // something about smash-it?
+    
+// level 2:
+// complete the level without killing any enemies
+achievement(
+    title = "The Gorgonites are peaceful. We mean no harm.",
+    points = 3, // TODO
+    description = "Complete " + LevelLookup[1] + " without killing any enemies",
+    trigger = is_scenario() && level_completed(1) && byte(LevelStats("kills")) == 0
+)
+
+// level 3:
+// disable when shooting with main weapon (cooldown > 0)
+function no_shooting() => disable_when(byte(LevelStats("weapon_cooldown")) > 0 && is_current_screen(LevelScreen[2]), is_current_screen(ScreenLookup["main"]))
+achievement(
+    title = "Punch It is desperate to hold it!",
+    points = 3, // TODO
+    description = "Complete " + LevelLookup[2] + " without using your main weapons",
+    //trigger = is_scenario() && no_shooting() && trigger_when(level_completed(2)) && disable_when(!is_current_screen(LevelScreen[2]) && !is_current_level(2), is_current_screen(LevelScreen[2]) && is_current_level(2))
+    trigger = is_scenario() && level_completed(2) && no_shooting()
+)
 
     // level 4:
     // TODO
@@ -318,16 +331,12 @@ achievement(
     // level 13:
     // TODO
 
-boss_restored = byte(LevelStats("vehicle")) == 0 // TODO
-no_turret = disable_when(byte(LevelStats("vehicle")) != 0, boss_restored)
+function no_turret() => disable_when(byte(LevelStats("vehicle")) != 0 && is_current_screen(LevelScreen[13]), is_current_screen(ScreenLookup["main"]))
 achievement(
     title = "No Problemo!",
     points = 25, // TODO
     description = "Defeat Chip Hazard without using the turret",
-    //trigger = level_completed(13) && byte(LevelStats("vehicle")) == 0 // TODO it's not enough, you could have used the turret before
-    //todo
-    trigger = IS_1P && NO_CHEATS && is_current_level(13) 
-        && no_turret && byte(LevelStats("kills")) == 1 && prev(byte(LevelStats("kills"))) == 0
+    trigger = is_scenario() && level_completed(13) && no_turret()
 )
 
 // Easter eggs
@@ -338,25 +347,31 @@ achievement(
     trigger = byte(ModeAddress) == 0 && ascii_string_equals(VideoAddress, "medal.str")
 )
 
-// discarded
-// achievement(
-//     title = "There's no need to go that hard" // TODO
-//     points = 1, // TODO
-//     description = "Set the music volume to maximum",
-//     trigger = byte(MusicVolumeAddress) == 0x7f && byte(MusicStatusAddress) != 2 && byte(MusicVolumeAddress) > prev(byte(MusicVolumeAddress))
-// )
-
 // Rich presence
-rich_presence_conditional_display(!NO_CHEATS, "Cheats enabled 🏴‍☠️")
+rich_presence_conditional_display(!no_cheats(), "Cheats enabled 🏴‍☠️")
 
 rich_presence_conditional_display(is_current_mode(1), "2P mode")
 
 rich_presence_conditional_display(is_current_mode(2), "Demo mode")
 
-rich_presence_conditional_display(IS_SCREEN, "In menu")
+//rich_presence_conditional_display(IS_SCREEN, "In menu") //TODO
 
-rich_presence_display("Level: {0} | ❤️: {1} | Difficulty: {2}",
+rich_presence_display("Level: {0} | ❤️: {1} | Difficulty: {2} | 🎮: {3}",
     rich_presence_lookup("Level", byte(LevelAddress), LevelLookup),
     rich_presence_value("Number", byte(LevelStats("lives"))),
     rich_presence_lookup("Difficulty", byte(DifficultyAddress), DifficultyLookup)
 )
+
+for level in LevelLookup {
+    //leaderboard(title, description, start, cancel, submit, value, format="VALUE", lower_is_better=false, id=0)
+    leaderboard(
+        title = "Best time in " + LevelLookup[level],
+        description = "time",
+        start = is_current_level(level) && is_current_screen(LevelScreen[level]) && !is_previous_screen(LevelScreen[level]),
+        cancel = is_current_screen(ScreenLookup["main"]),
+        submit = level_completed(level),
+        value = dword(LevelStats("time")) * 2, // 30fps
+        format = "FRAMES",
+        lower_is_better = true
+    )
+}
