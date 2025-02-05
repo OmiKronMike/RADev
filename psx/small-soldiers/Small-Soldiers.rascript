@@ -14,6 +14,7 @@ CheatInvincibilityAddress = 0x0393d8
 CheatAllWeaponsAddress = 0x0393d9
 CheatUnlimitedAmmoAddress = 0x0393da
 
+SummaryKillsAddress = 0x0393dc
 TriesAddress = 0x0393e3
 
 // Mode
@@ -48,6 +49,9 @@ LevelLookup = {
 function is_current_level(level) {
     return byte(LevelAddress) == level
 }
+function is_previous_level(level) {
+    return prev(byte(LevelAddress)) == level
+}
 
 LevelSecrets = {
     0: [3,1],
@@ -65,6 +69,8 @@ LevelSecrets = {
     12: [2,1],
     13: [1,0],
 }
+
+Timer = 0x09c240
 
 LevelStatsPointer = 0x0A1D1C
 LevelStatsOffsets = {
@@ -105,14 +111,19 @@ LevelScreen = {
     3: 0x0735,
     4: 0x2138,
     5: 0x4430,
-    6: 0x0, //TODO
-    7: 0x0, //TODO
-    8: 0x0, //TODO
-    9: 0x0, //TODO
-    10: 0x0, //TODO
-    11: 0x0, //TODO
-    12: 0x0, //TODO
-    13: 0x0, //TODO
+    6: 0x1946,
+    7: 0x0543,
+    8: 0x0350,
+    9: 0x2153,
+    10: 0x1957,
+    11: 0x5260,
+    12: 0x2153,
+    13: 0x0665,
+}
+
+BriefingPointer = 0x03b244
+function is_briefing_screen(level) {
+    return ascii_string_equals(tbyte(BriefingPointer), "data\\screen\\brief\\lev" + level)
 }
 
 VideoAddress = 0x1FFE79
@@ -123,17 +134,16 @@ function is_current_screen(screen) {
 function is_previous_screen(screen) {
     return prev(dword(ScreenAddress)) == screen
 }
-//IS_SCREEN = any_of(ScreenLookup, is_current_screen)
 
 // utility functions
 function is_1P() => byte(ModeAddress) == 0
 function is_hard() => byte(DifficultyAddress) == 2
 function has_level_changed() => byte(LevelAddress) != prev(byte(LevelAddress))
-function has_level_increased() => byte(LevelAddress) == prev(byte(LevelAddress)+1)
 function no_passwords() => disable_when(is_current_screen(ScreenLookup["password"]) && has_level_changed(), is_current_screen(ScreenLookup["main"]))
 function no_cheats() => byte(CheatInvincibilityAddress) == 0 && byte(CheatAllWeaponsAddress) == 0 && byte(CheatUnlimitedAmmoAddress) == 0
+function cheats_enabled() => byte(CheatInvincibilityAddress) == 1 || byte(CheatAllWeaponsAddress) == 1 || byte(CheatUnlimitedAmmoAddress) == 1
 function is_scenario() => is_1P() && no_cheats()
-function is_campaign() => is_1P() && no_passwords() && no_cheats()
+function is_campaign() => is_1P() && no_cheats() && no_passwords()
 
 function last_level_completed() {
     return 
@@ -147,7 +157,7 @@ function level_completed(level) {
         return last_level_completed()
     }
     return 
-        has_level_increased() && is_current_level(level+1) && is_current_screen(ScreenLookup["summary"])
+        is_previous_level(level) && is_current_level(level+1) && is_current_screen(ScreenLookup["summary"])
 }
 
 function collected_secrets(level) {
@@ -287,12 +297,17 @@ achievement(
     title = "The Gorgonites are peaceful. We mean no harm.",
     points = 3, // TODO
     description = "Complete " + LevelLookup[1] + " without killing any enemies",
-    trigger = is_scenario() && level_completed(1) && byte(LevelStats("kills")) == 0
+    trigger = is_scenario() && level_completed(1) && byte(SummaryKillsAddress) == 0
 )
 
 // level 3:
 // disable when shooting with main weapon (cooldown > 0)
-function no_shooting() => disable_when(byte(LevelStats("weapon_cooldown")) > 0 && is_current_screen(LevelScreen[2]), is_current_screen(ScreenLookup["main"]))
+function no_shooting() => 
+    disable_when(
+        byte(LevelStats("weapon_cooldown")) > 0 && is_current_screen(LevelScreen[2]), 
+        is_briefing_screen(2)
+        //is_current_screen(ScreenLookup["main"])
+    )
 achievement(
     title = "Punch It is desperate to hold it!",
     points = 3, // TODO
@@ -348,7 +363,7 @@ achievement(
 )
 
 // Rich presence
-rich_presence_conditional_display(!no_cheats(), "Cheats enabled 🏴‍☠️")
+rich_presence_conditional_display(cheats_enabled(), "Cheats enabled 🏴‍☠️")
 
 rich_presence_conditional_display(is_current_mode(1), "2P mode")
 
@@ -356,7 +371,7 @@ rich_presence_conditional_display(is_current_mode(2), "Demo mode")
 
 //rich_presence_conditional_display(IS_SCREEN, "In menu") //TODO
 
-rich_presence_display("Level: {0} | ❤️: {1} | Difficulty: {2} | 🎮: {3}",
+rich_presence_display("Level: {0} | ❤️: {1} | Difficulty: {2}",
     rich_presence_lookup("Level", byte(LevelAddress), LevelLookup),
     rich_presence_value("Number", byte(LevelStats("lives"))),
     rich_presence_lookup("Difficulty", byte(DifficultyAddress), DifficultyLookup)
@@ -367,10 +382,10 @@ for level in LevelLookup {
     leaderboard(
         title = "Best time in " + LevelLookup[level],
         description = "time",
-        start = is_current_level(level) && is_current_screen(LevelScreen[level]) && !is_previous_screen(LevelScreen[level]),
+        start = is_scenario() && is_current_level(level) && is_current_screen(LevelScreen[level]) && !is_previous_screen(LevelScreen[level]),
         cancel = is_current_screen(ScreenLookup["main"]),
         submit = level_completed(level),
-        value = dword(LevelStats("time")) * 2, // 30fps
+        value = dword(Timer) * 2, // 30fps
         format = "FRAMES",
         lower_is_better = true
     )
