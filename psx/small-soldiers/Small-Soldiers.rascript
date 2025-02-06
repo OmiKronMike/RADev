@@ -196,7 +196,7 @@ Titles = {
         13: "The War ends here!",
     },
     "collectables": {
-        0: "TODO 0",
+        0: "Use the Spirit Wells to traverse this realm",
         1: "TODO 1",
         2: "TODO 2",
         3: "TODO 3",
@@ -225,7 +225,7 @@ Titles = {
         10: "TODO 10",
         11: "TODO 11",
         12: "TODO 12",
-        13: "TODO 13",
+        13: "[NOT USED]",
     }
 }
 
@@ -247,7 +247,7 @@ for level in LevelLookup {
         title =  Titles["progression"][level],
         points = Points["progression"][level],
         type = progressionType,
-        description = "Complete " + LevelLookup[level] + " on any difficulty (no passwords)",
+        description = "Complete " + LevelLookup[level] + " on any difficulty without using passwords",
         trigger = is_campaign() && level_completed(level)
     )
 
@@ -256,7 +256,7 @@ for level in LevelLookup {
         title = Titles["progression"][level] + " [Hard]",
         points = Points["hard"][level],
         // technically redundant since passwords automatically set difficulty to normal
-        description = "Complete " + LevelLookup[level] + " on Hard difficulty (no passwords)",
+        description = "Complete " + LevelLookup[level] + " on Hard difficulty without using passwords",
         trigger = is_campaign() && level_completed(level) && is_hard()
     )
 
