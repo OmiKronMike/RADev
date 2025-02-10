@@ -270,14 +270,17 @@ for level in LevelLookup {
 
     // No-death
     // Note: No-death is always achieved on last level because if you die the boss returns to full health
-    if(level != length(LevelLookup)-1) {
+    /**
+    * @deprecated
+    */
+    /*if(level != length(LevelLookup)-1) {
         achievement(
             title = Titles["no_death"][level],
             points = Points["no_death"][level],
             description = "Complete " + LevelLookup[level] + " without dying",
             trigger = is_scenario() && level_completed(level) && byte(TriesAddress) == 1
         )
-    }
+    }*/
 }
 
 // extra challenges
@@ -367,7 +370,7 @@ rich_presence_conditional_display(cheats_enabled(), "Cheats enabled 🏴‍☠�
 
 rich_presence_conditional_display(is_current_mode(1), "2P mode")
 
-rich_presence_conditional_display(is_current_mode(2), "Demo mode")
+rich_presence_conditional_display(is_current_mode(2), "Watching demo mode")
 
 //rich_presence_conditional_display(IS_SCREEN, "In menu") //TODO
 
