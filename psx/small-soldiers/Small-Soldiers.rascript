@@ -79,7 +79,7 @@ LevelStatsOffsets = {
     "lives": 0x02e4,
     "kills": 0x0388,
     "weapon_cooldown": 0x03a0,
-    "equipped_weapon": 0x03ae,
+    "equipped_weapon": 0x03a4,
     "green_ammo": 0x03ac,
     "blue_ammo": 0x03ae,
     "secrets": 0x03d0,
@@ -129,10 +129,10 @@ function is_briefing_screen(level) {
 VideoAddress = 0x1FFE79
 
 function is_current_screen(screen) {
-    return dword(ScreenAddress) == screen
+    return tbyte(ScreenAddress) == screen
 }
 function is_previous_screen(screen) {
-    return prev(dword(ScreenAddress)) == screen
+    return prev(tbyte(ScreenAddress)) == screen
 }
 
 // utility functions
@@ -148,8 +148,10 @@ function is_campaign() => is_1P() && no_cheats() && no_passwords()
 function last_level_completed() {
     return 
         is_1P() && no_passwords() && no_cheats() &&
-        is_current_level(length(LevelLookup)-1) && 
-        ascii_string_equals(VideoAddress, "end.str") //last level doesn't have a summary screen
+        is_current_level(length(LevelLookup)-1) &&
+        //last level doesn't have a summary screen, so we check if the end video is playing    
+        ascii_string_equals(VideoAddress, "end.str") &&
+        dword(VideoAddress) != prev(dword(VideoAddress))
 }
 
 function level_completed(level) {
@@ -193,10 +195,10 @@ Titles = {
         10: "The Commando Space Fleet Is Preparing To Strike!",
         11: "The Commando Home-World Is On the Alert!",
         12: "The Commandos Are Manning Their Defenses!",
-        13: "The War ends here!",
+        13: "The War Ends Here!",
     },
     "collectables": {
-        0: "Use the Spirit Wells to traverse this realm",
+        0: "Use the Spirit Wells to Traverse This Realm",
         1: "TODO 1",
         2: "TODO 2",
         3: "TODO 3",
@@ -212,7 +214,7 @@ Titles = {
         13: "Death From Below",
     },
     "no_death" : {
-        0: "Greetings. I am Archer, emissary or the Gorgonites.",
+        0: "Greetings. I am Archer, Emissary of the Gorgonites.",
         1: "TODO 1",
         2: "TODO 2",
         3: "TODO 3",
@@ -235,6 +237,22 @@ Points = {
     "collectables": [3,3,3,3,3, 3,3,3,3,3, 3,3,3,3],
     "no_death": [5,5,5,5,5, 5,5,5,5,5, 5,5,5,5],
 }
+
+function offsets_list() {
+    list = true
+    for offset in LevelStatsOffsets {
+        list = list && byte(LevelStats(offset)) == 0
+    }
+    return list
+}
+// Debug achievement - list of every offset in pointer so we can right click it in memory inspector
+achievement(
+    title = "[VOID]",
+    description = "[VOID]",
+    id = 419820,
+    points = 0,
+    trigger = offsets_list()
+)
 
 for level in LevelLookup {
 
@@ -287,7 +305,7 @@ for level in LevelLookup {
 // level 1: 
 // kill all enemies
 achievement(
-    title = "Beware. There will be no mercy.",
+    title = "Beware. There Will Be No Mercy.",
     points = 3, // TODO
     description = "Kill all enemies in " + LevelLookup[0] + " and complete the level",
     trigger = is_scenario() && level_completed(0) && byte(LevelStats("kills")) == 21
@@ -297,7 +315,7 @@ achievement(
 // level 2:
 // complete the level without killing any enemies
 achievement(
-    title = "The Gorgonites are peaceful. We mean no harm.",
+    title = "The Gorgonites Are Peaceful. We Mean No Harm.",
     points = 3, // TODO
     description = "Complete " + LevelLookup[1] + " without killing any enemies",
     trigger = is_scenario() && level_completed(1) && byte(SummaryKillsAddress) == 0
@@ -312,8 +330,8 @@ function no_shooting() =>
         //is_current_screen(ScreenLookup["main"])
     )
 achievement(
-    title = "Punch It is desperate to hold it!",
-    points = 3, // TODO
+    title = "Punch It Is Desperate To Hold It!",
+    points = 5, // TODO
     description = "Complete " + LevelLookup[2] + " without using your main weapons",
     //trigger = is_scenario() && no_shooting() && trigger_when(level_completed(2)) && disable_when(!is_current_screen(LevelScreen[2]) && !is_current_level(2), is_current_screen(LevelScreen[2]) && is_current_level(2))
     trigger = is_scenario() && level_completed(2) && no_shooting()
@@ -353,8 +371,17 @@ function no_turret() => disable_when(byte(LevelStats("vehicle")) != 0 && is_curr
 achievement(
     title = "No Problemo!",
     points = 25, // TODO
-    description = "Defeat Chip Hazard without using the turret",
+    description = "Defeat Chip Hazard in Inner Sanctum without using the turret",
     trigger = is_scenario() && level_completed(13) && no_turret()
+)
+
+// Have every weapon at the same time without using cheats
+achievement(
+    title = "The Ultimate Arsenal",
+    points = 10, // TODO
+    description = "Have every weapon at the same time without using cheats",
+    // TODO
+    trigger = is_scenario() && is_current_level(13) && level_completed(13) && byte(LevelStats("equipped_weapon")) == 15
 )
 
 // Easter eggs
@@ -362,7 +389,7 @@ achievement(
     title = "An Adventure Through the Heart of Our Most Dangerous Conflict", 
     points = 1, // TODO
     description = "Watch the Medal of Honor promotional video",
-    trigger = byte(ModeAddress) == 0 && ascii_string_equals(VideoAddress, "medal.str")
+    trigger = byte(ModeAddress) == 0 && ascii_string_equals(VideoAddress, "medal.str") && dword(VideoAddress) != prev(dword(VideoAddress))
 )
 
 // Rich presence
@@ -372,8 +399,6 @@ rich_presence_conditional_display(is_current_mode(1), "2P mode")
 
 rich_presence_conditional_display(is_current_mode(2), "Watching demo mode")
 
-//rich_presence_conditional_display(IS_SCREEN, "In menu") //TODO
-
 rich_presence_display("Level: {0} | ❤️: {1} | Difficulty: {2}",
     rich_presence_lookup("Level", byte(LevelAddress), LevelLookup),
     rich_presence_value("Number", byte(LevelStats("lives"))),
@@ -381,10 +406,9 @@ rich_presence_display("Level: {0} | ❤️: {1} | Difficulty: {2}",
 )
 
 for level in LevelLookup {
-    //leaderboard(title, description, start, cancel, submit, value, format="VALUE", lower_is_better=false, id=0)
     leaderboard(
-        title = "Best time in " + LevelLookup[level],
-        description = "time",
+        title = "Best Time In " + LevelLookup[level],
+        description = "Complete " + LevelLookup[level] + " in the fastest time possible on any difficulty",
         start = is_scenario() && is_current_level(level) && is_current_screen(LevelScreen[level]) && !is_previous_screen(LevelScreen[level]),
         cancel = is_current_screen(ScreenLookup["main"]),
         submit = level_completed(level),

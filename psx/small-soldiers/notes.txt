@@ -1,0 +1,2 @@
+8009a7f4 #pause?
+DATA_8009a7d4_1p_2p_mode # 2 = 2p
