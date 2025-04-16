@@ -1,0 +1,12 @@
+IADD:00000004:/spirit-bog-1st-teleporter
+IDSET:/spirit-bog-1st-teleporter:a9fec610e4731926056833079600
+IDEL:/spirit-bog-start
+IADD:00000005:/spirit-bog-2nd-teleporter
+IDSET:/spirit-bog-2nd-teleporter:a9fec610e4821926147033994100
+IADD:00000006:/spirit-bog-2nd-teleporter-destroyed
+IDSET:/spirit-bog-2nd-teleporter-destroyed:a9fec610e4861926162985776400
+IDEL:/spirit-bog-2nd-teleporter-destroyed
+IADD:00000007:/spirit-bog-2nd-teleporter-destroyed
+IDSET:/spirit-bog-2nd-teleporter-destroyed:a9fec610e4ab1926192085356900
+IADD:00000008:/spirit-bog-start
+IDSET:/spirit-bog-start:a9fec610e4af1926206868000500
