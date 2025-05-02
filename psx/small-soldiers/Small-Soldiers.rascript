@@ -181,6 +181,57 @@ function collected_secrets(level) {
         prev_total_secrets == target_secrets - 1
 }
 
+IDs = {
+    "progression": {
+        0: 419778,
+        1: 419779,
+        2: 419780,
+        3: 419781,
+        4: 419782,
+        5: 419783,
+        6: 419784,
+        7: 419785,
+        8: 419786,
+        9: 419787,
+        10: 419796,
+        11: 419797,
+        12: 419798,
+        13: 419788,                
+    },
+    "hard": {
+        0: 419799,
+        1: 419800,
+        2: 419801,
+        3: 419789,
+        4: 419802,
+        5: 419803,
+        6: 419804,
+        7: 419805,
+        8: 419790,
+        9: 419806,
+        10: 419811,
+        11: 419810,
+        12: 419812,
+        13: 419791,                
+    },
+    "collectables": {
+        0: 419792,
+        1: 419807,
+        2: 419813,
+        3: 419793,
+        4: 419814,
+        5: 419815,
+        6: 419794,
+        7: 419816,
+        8: 419808,
+        9: 419817,
+        10: 419818,
+        11: 419795,
+        12: 419819,
+        13: 419809,                
+    },
+}
+
 Titles = {
     "progression": {
         0: "The Commandos Have Invaded Gorgon!",
@@ -248,6 +299,58 @@ Titles = {
     }
 }
 
+// TODO
+Badges = {
+    "progression": {
+        0: "568850",
+        1: "Dimensional Temple",
+        2: "Floating Fortress",
+        3: "Spirit Bog",
+        4: "Canyon Village",
+        5: "Creepy Caverns",
+        6: "Space Ship",
+        7: "Hall of Patriots",
+        8: "Graveyard of War",
+        9: "Nuclear Mine",
+        10: "Launch Center",
+        11: "Ulhaden Fier",
+        12: "Garrison Prime",
+        13: "Inner Sanctum",
+    },
+    "hard": {
+        0: "Gorgon",
+        1: "Dimensional Temple",
+        2: "Floating Fortress",
+        3: "Spirit Bog",
+        4: "Canyon Village",
+        5: "Creepy Caverns",
+        6: "Space Ship",
+        7: "Hall of Patriots",
+        8: "Graveyard of War",
+        9: "Nuclear Mine",
+        10: "Launch Center",
+        11: "Ulhaden Fier",
+        12: "Garrison Prime",
+        13: "Inner Sanctum",
+    },
+    "collectables": {
+        0: "Gorgon",
+        1: "Dimensional Temple",
+        2: "Floating Fortress",
+        3: "Spirit Bog",
+        4: "Canyon Village",
+        5: "Creepy Caverns",
+        6: "Space Ship",
+        7: "Hall of Patriots",
+        8: "Graveyard of War",
+        9: "Nuclear Mine",
+        10: "Launch Center",
+        11: "Ulhaden Fier",
+        12: "Garrison Prime",
+        13: "Inner Sanctum",
+    }
+}
+
 Points = {
     "progression": [2,2,2,2,2, 2,2,2,2,2, 2,2,2,2],
     "hard": [5,5,5,5,5, 5,5,5,5,5, 5,5,5,5],
@@ -282,7 +385,9 @@ for level in LevelLookup {
     }
     // Progression Any difficulty
     achievement(
+        id = IDs["progression"][level],
         title =  Titles["progression"][level],
+        badge = Badges["progression"][level],
         points = Points["progression"][level],
         type = progressionType,
         description = "Complete " + LevelLookup[level] + " on any difficulty without using passwords",
@@ -291,6 +396,7 @@ for level in LevelLookup {
 
     // Progression Hard mode
     achievement(
+        id = IDs["hard"][level],
         title = Titles["hard"][level],
         points = Points["hard"][level],
         // technically redundant since passwords automatically set difficulty to normal
@@ -300,6 +406,7 @@ for level in LevelLookup {
 
     // Collectables
     achievement(
+        id = IDs["collectables"][level],
         title = Titles["collectables"][level],
         points = Points["collectables"][level],
         description = "Collect all secrets and talismans in " + LevelLookup[level],
