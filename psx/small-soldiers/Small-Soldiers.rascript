@@ -14,6 +14,7 @@ CheatInvincibilityAddress = 0x0393d8
 CheatAllWeaponsAddress = 0x0393d9
 CheatUnlimitedAmmoAddress = 0x0393da
 
+SummaryLivesAddress = 0x0393ce
 SummaryKillsAddress = 0x0393dc
 TriesAddress = 0x0393e3
 
@@ -413,6 +414,24 @@ achievement(
         byte(LevelStats("blue_ammo"))
         
 ) */
+
+achievement(
+    title = "You never have to replace the battery",
+    points = 5, // TODO
+    description = "Have 9 lives on hard difficulty",
+    trigger = is_scenario() && 
+        is_hard() && 
+        (
+            ( // during summary screen
+                is_current_screen(ScreenLookup["summary"]) && 
+                byte(SummaryLivesAddress) == 10 && 
+                prev(byte(SummaryLivesAddress)) == 9
+            ) ||
+            ( // during gameplay
+                byte(LevelStats("lives")) == 10 &&
+                prev(byte(LevelStats("lives"))) == 9
+            )
+        )
 )
 
 // Easter eggs
