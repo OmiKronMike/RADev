@@ -76,14 +76,14 @@ LevelStatsPointer = 0x0A1D1C
 LevelStatsOffsets = {
     "time": 0x0028,
     "vehicle": 0x002c, //24-bit pointer
-    "lives": 0x02e4,
-    "kills": 0x0388,
-    "weapon_cooldown": 0x03a0,
-    "equipped_weapon": 0x03a4,
-    "green_ammo": 0x03ac,
-    "blue_ammo": 0x03ae,
-    "secrets": 0x03d0,
-    "talismans": 0x03d2,
+    "lives": 0x02e4, //8-bit
+    "kills": 0x0388, //8-bit
+    "weapon_cooldown": 0x03a0, //8-bit
+    "equipped_weapon": 0x03a4, //8-bit
+    "green_ammo": 0x03ac, //8-bit
+    "blue_ammo": 0x03ae, //8-bit
+    "secrets": 0x03d0, //8-bit
+    "talismans": 0x03d2, //8-bit
 }
 function LevelStats(stat) {
     return tbyte(LevelStatsPointer) + LevelStatsOffsets[stat]
@@ -197,6 +197,22 @@ Titles = {
         12: "The Commandos Are Manning Their Defenses!",
         13: "The War Ends Here!",
     },
+    "hard": {
+        0: "[HARD] The Commandos Have Invaded Gorgon!",
+        1: "[HARD] The Dimensional Temple Is Under Attack!",
+        2: "[HARD] The Flagship of the Gorgonite Fleet Is Under Siege!",
+        3: "[HARD] Commando Invaders Are Defiling This Realm!",
+        4: "[HARD] The Commandos Are Raiding the Village!",
+        5: "[HARD] The Commandos Are Mining Gorgonite Ore!",
+        6: "[HARD] The Space Ship Devastator Is a Planet Killer!",
+        7: "[HARD] The Commandos Are Testing a Secret Super-Weapon!",
+        8: "[HARD] The Commandos Are Fueling Their Weapons of War!",
+        9: "[HARD] The Commandos Are Mining for Atomics!",
+        10: "[HARD] The Commando Space Fleet Is Preparing To Strike!",
+        11: "[HARD] The Commando Home-World Is On the Alert!",
+        12: "[HARD] The Commandos Are Manning Their Defenses!",
+        13: "[HARD] The War Ends Here!",
+    },
     "collectables": {
         0: "Use the Spirit Wells to Traverse This Realm",
         1: "TODO 1",
@@ -238,6 +254,8 @@ Points = {
     "no_death": [5,5,5,5,5, 5,5,5,5,5, 5,5,5,5],
 }
 
+// Dummy achievement for debugging purpose
+// list of every offset in pointer so we can right click it to jump in memory inspector
 function offsets_list() {
     list = true
     for offset in LevelStatsOffsets {
@@ -245,7 +263,6 @@ function offsets_list() {
     }
     return list
 }
-// Debug achievement - list of every offset in pointer so we can right click it in memory inspector
 achievement(
     title = "[VOID]",
     description = "[VOID]",
@@ -253,7 +270,9 @@ achievement(
     points = 0,
     trigger = offsets_list()
 )
+// End of dummy achievement
 
+// Main achievements
 for level in LevelLookup {
 
     progressionType = "progression"
@@ -271,7 +290,7 @@ for level in LevelLookup {
 
     // Progression Hard mode
     achievement(
-        title = Titles["progression"][level] + " [Hard]",
+        title = Titles["hard"][level],
         points = Points["hard"][level],
         // technically redundant since passwords automatically set difficulty to normal
         description = "Complete " + LevelLookup[level] + " on Hard difficulty without using passwords",
@@ -304,24 +323,29 @@ for level in LevelLookup {
 // extra challenges
 // level 1: 
 // kill all enemies
-achievement(
+/**
+* @deprecated
+* DEPRECATED: I'm unable to replicate the condition consistently, sometimes it's 23, sometimes 22,
+    and sometimes 24. Maybe because of enemy friendly fire?
+*/
+/* achievement(
     title = "Beware. There Will Be No Mercy.",
     points = 3, // TODO
     description = "Kill all enemies in " + LevelLookup[0] + " and complete the level",
-    trigger = is_scenario() && level_completed(0) && byte(LevelStats("kills")) == 21
-)
+    trigger = is_scenario() && byte(LevelStats("kills")) == 24 && prev(byte(LevelStats("kills"))) == 23
+) */
 
     
-// level 2:
-// complete the level without killing any enemies
+// level 2 extras:
+// complete the level without killing any enemy
 achievement(
     title = "The Gorgonites Are Peaceful. We Mean No Harm.",
     points = 3, // TODO
-    description = "Complete " + LevelLookup[1] + " without killing any enemies",
+    description = "Complete " + LevelLookup[1] + " without killing any enemy",
     trigger = is_scenario() && level_completed(1) && byte(SummaryKillsAddress) == 0
 )
 
-// level 3:
+// level 3 extras:
 // disable when shooting with main weapon (cooldown > 0)
 function no_shooting() => 
     disable_when(
@@ -337,36 +361,37 @@ achievement(
     trigger = is_scenario() && level_completed(2) && no_shooting()
 )
 
-    // level 4:
-    // TODO
+// level 4 extras:
+// TODO
 
-    // level 5:
-    // TODO
+// level 5 extras:
+// TODO
 
-    // level 6:
-    // TODO
+// level 6 extras:
+// TODO
 
-    // level 7:
-    // TODO
+// level 7 extras:
+// TODO
 
-    // level 8:
-    // TODO
+// level 8 extras:
+// TODO
 
-    // level 9:
-    // TODO
+// level 9 extras:
+// TODO
 
-    // level 10:
-    // TODO
+// level 10 extras:
+// TODO
 
-    // level 11:
-    // TODO
+// level 11 extras:
+// TODO
 
-    // level 12:
-    // TODO
+// level 12 extras:
+// TODO
 
-    // level 13:
-    // TODO
+// level 13 extras:
+// TODO
 
+// level 14 extras:
 function no_turret() => disable_when(byte(LevelStats("vehicle")) != 0 && is_current_screen(LevelScreen[13]), is_current_screen(ScreenLookup["main"]))
 achievement(
     title = "No Problemo!",
@@ -375,13 +400,19 @@ achievement(
     trigger = is_scenario() && level_completed(13) && no_turret()
 )
 
+// stats
 // Have every weapon at the same time without using cheats
-achievement(
-    title = "The Ultimate Arsenal",
+// TODO
+/* achievement(
+    title = "TBA",
     points = 10, // TODO
     description = "Have every weapon at the same time without using cheats",
     // TODO
-    trigger = is_scenario() && is_current_level(13) && level_completed(13) && byte(LevelStats("equipped_weapon")) == 15
+    trigger = is_scenario() &&
+        byte(LevelStats("green_ammo")) &&
+        byte(LevelStats("blue_ammo"))
+        
+) */
 )
 
 // Easter eggs
