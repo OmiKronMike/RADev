@@ -73,7 +73,18 @@ LevelSecrets = {
 
 Timer = 0x09c240
 
-LevelStatsPointer = 0x0A1D1C
+LevelDataPointer = 0x09fbd8
+LevelDataOffsets = {
+    "green_key": 0x0054, //8-bit
+    "red_key": 0x005c, //8-bit
+    "yellow_key": 0x0064, //8-bit
+    "blue_key": 0x006c, //8-bit
+}
+function LevelData(data) {
+    return tbyte(LevelDataPointer) + LevelDataOffsets[data]
+}
+
+LevelStatsPointer = 0x0a1d1c
 LevelStatsOffsets = {
     "time": 0x0028,
     "vehicle": 0x002c, //24-bit pointer
@@ -83,8 +94,11 @@ LevelStatsOffsets = {
     "equipped_weapon": 0x03a4, //8-bit
     "green_ammo": 0x03ac, //8-bit
     "blue_ammo": 0x03ae, //8-bit
+    "equipped_secondary": 0x03ce, //8-bit
     "secrets": 0x03d0, //8-bit
     "talismans": 0x03d2, //8-bit
+    "gorgonites": 0x03d6, //8-bit
+    "mines": 0x03da, //8-bit
 }
 function LevelStats(stat) {
     return tbyte(LevelStatsPointer) + LevelStatsOffsets[stat]
@@ -123,20 +137,25 @@ LevelScreen = {
 }
 
 BriefingPointer = 0x03b244
-function is_briefing_screen(level) {
-    return ascii_string_equals(tbyte(BriefingPointer), "data\\screen\\brief\\lev" + level)
-}
+
 
 VideoAddress = 0x1FFE79
 
+
+
+// ***UTILITY FUNCTIONS***
+function is_briefing_screen(level) {
+    return ascii_string_equals(tbyte(BriefingPointer), "data\\screen\\brief\\lev" + level)
+}
 function is_current_screen(screen) {
     return tbyte(ScreenAddress) == screen
 }
 function is_previous_screen(screen) {
     return prev(tbyte(ScreenAddress)) == screen
 }
-
-// utility functions
+function is_prior_screen(screen) {
+    return prior(tbyte(ScreenAddress)) == screen
+}
 function is_1P() => byte(ModeAddress) == 0
 function is_hard() => byte(DifficultyAddress) == 2
 function has_level_changed() => byte(LevelAddress) != prev(byte(LevelAddress))
@@ -181,6 +200,21 @@ function collected_secrets(level) {
         prev_total_secrets == target_secrets - 1
 }
 
+function collected_keys(keys) {
+    conditions = true
+    for key in keys {
+        conditions = conditions && (byte(LevelData(key)) == 1 || byte(LevelData(key)) == 2)
+    }
+    return conditions
+}
+
+function level_challenge(level) {
+    return is_scenario() &&
+        is_current_level(level) && 
+        is_current_screen(LevelScreen[level])
+}
+
+// *** SET DATA ***
 IDs = {
     "progression": {
         0: 419778,
@@ -358,7 +392,7 @@ Points = {
     "no_death": [5,5,5,5,5, 5,5,5,5,5, 5,5,5,5],
 }
 
-// Dummy achievement for debugging purpose
+// *** DEBUGGING ***
 // list of every offset in pointer so we can right click it to jump in memory inspector
 function offsets_list() {
     list = true
@@ -374,9 +408,8 @@ achievement(
     points = 0,
     trigger = offsets_list()
 )
-// End of dummy achievement
 
-// Main achievements
+// *** ACHIEVEMENTS ***
 for level in LevelLookup {
 
     progressionType = "progression"
@@ -390,7 +423,7 @@ for level in LevelLookup {
         badge = Badges["progression"][level],
         points = Points["progression"][level],
         type = progressionType,
-        description = "Complete " + LevelLookup[level] + " on any difficulty without using passwords",
+        description = "Complete " + LevelLookup[level] + " without using passwords",
         trigger = is_campaign() && level_completed(level)
     )
 
@@ -400,7 +433,7 @@ for level in LevelLookup {
         title = Titles["hard"][level],
         points = Points["hard"][level],
         // technically redundant since passwords automatically set difficulty to normal
-        description = "Complete " + LevelLookup[level] + " on Hard difficulty without using passwords",
+        description = "Complete " + LevelLookup[level] + " on Hard difficulty",
         trigger = is_campaign() && level_completed(level) && is_hard()
     )
 
@@ -428,7 +461,9 @@ for level in LevelLookup {
     }*/
 }
 
-// extra challenges
+// ***CHALLENGES***
+
+
 // level 1: 
 // kill all enemies
 /**
@@ -442,31 +477,33 @@ for level in LevelLookup {
     description = "Kill all enemies in " + LevelLookup[0] + " and complete the level",
     trigger = is_scenario() && byte(LevelStats("kills")) == 24 && prev(byte(LevelStats("kills"))) == 23
 ) */
-
     
 // level 2 extras:
 // complete the level without killing any enemy
 achievement(
     title = "The Gorgonites Are Peaceful. We Mean No Harm.",
-    points = 3, // TODO
-    description = "Complete " + LevelLookup[1] + " without killing any enemy",
-    trigger = is_scenario() && level_completed(1) && byte(SummaryKillsAddress) == 0
+    points = 5, // TODO
+    description = "Collect all keys in " + LevelLookup[1] + " without killing any enemy",
+    trigger = level_challenge(1) && 
+        byte(LevelStats("kills")) == 0 &&
+        trigger_when(collected_keys(["green_key", "red_key", "yellow_key", "blue_key"])) 
 )
 
 // level 3 extras:
 // disable when shooting with main weapon (cooldown > 0)
-function no_shooting() => 
-    disable_when(
-        byte(LevelStats("weapon_cooldown")) > 0 && is_current_screen(LevelScreen[2]), 
-        is_briefing_screen(2)
-        //is_current_screen(ScreenLookup["main"])
-    )
 achievement(
     title = "Punch It Is Desperate To Hold It!",
     points = 5, // TODO
-    description = "Complete " + LevelLookup[2] + " without using your main weapons",
+    description = "Collect all keys in " + LevelLookup[2] + " without using crossbows, bombs or traps",
     //trigger = is_scenario() && no_shooting() && trigger_when(level_completed(2)) && disable_when(!is_current_screen(LevelScreen[2]) && !is_current_level(2), is_current_screen(LevelScreen[2]) && is_current_level(2))
-    trigger = is_scenario() && level_completed(2) && no_shooting()
+    //trigger = is_scenario() && level_completed(2) && no_shooting()
+    trigger = level_challenge(2) &&
+    //TODO add disable when using secondary weapon
+        disable_when(
+            byte(LevelStats("weapon_cooldown")) > 0, 
+            !is_current_screen(LevelScreen[2])
+        ) &&
+        trigger_when(collected_keys(["green_key", "red_key", "yellow_key"]))
 )
 
 // level 4 extras:
@@ -499,13 +536,20 @@ achievement(
 // level 13 extras:
 // TODO
 
-// level 14 extras:
-function no_turret() => disable_when(byte(LevelStats("vehicle")) != 0 && is_current_screen(LevelScreen[13]), is_current_screen(ScreenLookup["main"]))
+// level 14 extras:    
 achievement(
     title = "No Problemo!",
     points = 25, // TODO
     description = "Defeat Chip Hazard in Inner Sanctum without using the turret",
-    trigger = is_scenario() && level_completed(13) && no_turret()
+    trigger = level_challenge(13) &&
+        disable_when(
+            byte(LevelStats("vehicle")) != 0, // disable when mounted on turret
+            !is_current_screen(LevelScreen[13])
+        ) && // trigger on kill count
+        trigger_when(
+            byte(LevelStats("kills")) == 1 &&
+            prev(byte(LevelStats("kills"))) == 0
+        )
 )
 
 // stats
@@ -523,7 +567,7 @@ achievement(
 ) */
 
 achievement(
-    title = "You never have to replace the battery",
+    title = "You Never Have to Replace the Battery",
     points = 5, // TODO
     description = "Have 9 lives on hard difficulty",
     trigger = is_scenario() && 
@@ -558,7 +602,7 @@ rich_presence_conditional_display(is_current_mode(2), "Watching demo mode")
 
 rich_presence_display("Level: {0} | ❤️: {1} | Difficulty: {2}",
     rich_presence_lookup("Level", byte(LevelAddress), LevelLookup),
-    rich_presence_value("Number", byte(LevelStats("lives"))),
+    rich_presence_value("Number", byte(LevelStats("lives"))-1),
     rich_presence_lookup("Difficulty", byte(DifficultyAddress), DifficultyLookup)
 )
 
