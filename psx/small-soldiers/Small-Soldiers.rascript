@@ -97,8 +97,8 @@ LevelStatsOffsets = {
     "equipped_secondary": 0x03ce, //8-bit
     "secrets": 0x03d0, //8-bit
     "talismans": 0x03d2, //8-bit
-    "gorgonites": 0x03d6, //8-bit
-    "mines": 0x03da, //8-bit
+    "mines": 0x03d6, //8-bit
+    "gorgonites": 0x03da, //8-bit
 }
 function LevelStats(stat) {
     return tbyte(LevelStatsPointer) + LevelStatsOffsets[stat]
@@ -464,7 +464,7 @@ for level in LevelLookup {
 // ***CHALLENGES***
 
 
-// level 1: 
+// level 1 gorgon
 // kill all enemies
 /**
 * @deprecated
@@ -478,32 +478,38 @@ for level in LevelLookup {
     trigger = is_scenario() && byte(LevelStats("kills")) == 24 && prev(byte(LevelStats("kills"))) == 23
 ) */
     
-// level 2 extras:
+// level 2 dimensional temple
 // complete the level without killing any enemy
+// TESTED
 achievement(
     title = "The Gorgonites Are Peaceful. We Mean No Harm.",
-    points = 5, // TODO
+    points = 5,
     description = "Collect all keys in " + LevelLookup[1] + " without killing any enemy",
     trigger = level_challenge(1) && 
         byte(LevelStats("kills")) == 0 &&
         trigger_when(collected_keys(["green_key", "red_key", "yellow_key", "blue_key"])) 
 )
 
-// level 3 extras:
+// level 3 floating fortress
 // disable when shooting with main weapon (cooldown > 0)
+// TESTED
 achievement(
     title = "Punch It Is Desperate To Hold It!",
-    points = 5, // TODO
-    description = "Collect all keys in " + LevelLookup[2] + " without using crossbows, bombs or traps",
+    points = 5,
+    description = "Reach the turret in " + LevelLookup[2] + " using only Punch It",
     //trigger = is_scenario() && no_shooting() && trigger_when(level_completed(2)) && disable_when(!is_current_screen(LevelScreen[2]) && !is_current_level(2), is_current_screen(LevelScreen[2]) && is_current_level(2))
     //trigger = is_scenario() && level_completed(2) && no_shooting()
     trigger = level_challenge(2) &&
-    //TODO add disable when using secondary weapon
         disable_when(
-            byte(LevelStats("weapon_cooldown")) > 0, 
-            !is_current_screen(LevelScreen[2])
+            comparison = byte(LevelStats("weapon_cooldown")) > 0, // disable when shooting with any crossbow
+            until = !is_current_screen(LevelScreen[2])
         ) &&
-        trigger_when(collected_keys(["green_key", "red_key", "yellow_key"]))
+        disable_when(
+            comparison = byte(LevelStats("mines")) < prev(byte(LevelStats("mines"))) && // disable when using mines
+                byte(LevelStats("lives")) == prev(byte(LevelStats("lives"))), // check if we didn't die, because when you die you lose everything
+            until = !is_current_screen(LevelScreen[2])
+        ) &&
+        trigger_when(byte(LevelStats("vehicle")) != 0)
 )
 
 // level 4 extras:
