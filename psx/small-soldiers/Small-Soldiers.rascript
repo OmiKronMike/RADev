@@ -106,6 +106,7 @@ LevelStatsPointer = 0x0a1d1c
 LevelStatsOffsets = {
     "time": 0x0028,
     "vehicle": 0x002c, //24-bit pointer
+    "player_data": 0x00d8, // 24-bit pointer
     "lives": 0x02e4, //8-bit
     "kills": 0x0388, //8-bit
     "weapon_cooldown": 0x03a0, //8-bit
@@ -118,8 +119,14 @@ LevelStatsOffsets = {
     "mines": 0x03d6, //8-bit
     "gorgonites": 0x03da, //8-bit
 }
+PlayerDataOffsets = {
+    "jump": 0x03d9, //8-bit
+}
 function LevelStats(stat) {
     return tbyte(LevelStatsPointer) + LevelStatsOffsets[stat]
+}
+function PlayerData(stat) {
+    return tbyte(LevelStats("player_data")) + PlayerDataOffsets[stat]
 }
 
 // Screen
@@ -428,7 +435,7 @@ achievement(
     description = "[VOID]",
     id = 419820,
     points = 0,
-    trigger = offsets_list()
+    trigger = tally(100, byte(PlayerData("jump")) == 2) && byte(LevelStats("kills")) == 0 
 )
 
 // *** ACHIEVEMENTS ***
@@ -538,8 +545,16 @@ achievement(
 
 // TODO
 
-// level 5 extras:
-// TODO
+// level 5 canyon village
+// collect every key without jumping
+achievement(
+    title = "Jump",
+    points = 5, // TODO
+    description = "Collect all keys in " + LevelLookup[4] + " without jumping",
+    trigger = level_challenge(4) && 
+        trigger_when(collected_keys(["green_key", "red_key", "yellow_key"])) &&
+        disable_when(byte(PlayerData("jump")) != 0, !is_current_screen(LevelScreen[4]))
+)
 
 // level 6 extras:
 // TODO
@@ -617,7 +632,7 @@ achievement(
 
 // win as Chip Hazard in 2p mode
 achievement(
-    title = "Mission Accomplished!",
+    title = "Featuring Tommy Lee Jones",
     points = 5, // TODO
     description = "Win as Chip Hazard in 2 Players frag mode in any level",
     trigger = is_2p_frag() &&
