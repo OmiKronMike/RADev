@@ -21,12 +21,14 @@ TriesAddress = 0x0393e3
 // Mode
 ModeAddress = 0x0393C4
 ModeLookup = {
-    0: "Campaign",
-    1: "2P",
-    2: "Demo",
+    "campaign": 0,
+    "2p": 1,
+    "demo": 2
 }
-function is_current_mode(mode) {
-    return byte(ModeAddress) == mode
+MultiPlayerModeAddress = 0x0393cb
+MultiPlayerModeLookup = {
+    "frag": 0,
+    "flag": 1
 }
 
 // Level
@@ -52,6 +54,22 @@ function is_current_level(level) {
 }
 function is_previous_level(level) {
     return prev(byte(LevelAddress)) == level
+}
+
+MultiplayerLevelAddress = 0x0393ca
+MultiplayerLevelLookup = {
+    1: "Dimensional Temple",
+    2: "Creepy Caverns",
+    3: "Spirit Bog",
+    4: "Hall of Patriots",
+    5: "Nuclear Mine",
+    6: "Garrison Prime"
+}
+function is_current_multiplayer_level(level) {
+    return byte(MultiplayerLevelAddress) == level
+}
+function is_previous_multiplayer_level(level) {
+    return prev(byte(MultiplayerLevelAddress)) == level
 }
 
 LevelSecrets = {
@@ -108,7 +126,7 @@ function LevelStats(stat) {
 ScreenAddress = 0x03af30
 ScreenLookup = {
     "main": 0x40019,
-    "2P": 0x15518,
+    "2p": 0x15518,
     "load": 0x124718,
     "password": 0x315218,
     "options_main": 0x265018,
@@ -117,6 +135,8 @@ ScreenLookup = {
     "options_sound": 0x595818,
     "credits": 0x565702,
     "summary": 0x554118,
+    "archer_victory": 0x173719,
+    "chip_victory": 0x103919
 }
 
 LevelScreen = {
@@ -156,7 +176,9 @@ function is_previous_screen(screen) {
 function is_prior_screen(screen) {
     return prior(tbyte(ScreenAddress)) == screen
 }
-function is_1P() => byte(ModeAddress) == 0
+function is_1P() => byte(ModeAddress) == ModeLookup["campaign"]
+function is_2p_frag() => byte(ModeAddress) == ModeLookup["2p"] && byte(MultiPlayerModeAddress) == MultiPlayerModeLookup["frag"]
+function is_2p_flag() => byte(ModeAddress) == ModeLookup["2p"] && byte(MultiPlayerModeAddress) == MultiPlayerModeLookup["flag"]
 function is_hard() => byte(DifficultyAddress) == 2
 function has_level_changed() => byte(LevelAddress) != prev(byte(LevelAddress))
 function no_passwords() => disable_when(is_current_screen(ScreenLookup["password"]) && has_level_changed(), is_current_screen(ScreenLookup["main"]))
@@ -512,7 +534,8 @@ achievement(
         trigger_when(byte(LevelStats("vehicle")) != 0)
 )
 
-// level 4 extras:
+// level 4 spirit bog
+
 // TODO
 
 // level 5 extras:
@@ -558,7 +581,8 @@ achievement(
         )
 )
 
-// stats
+// ***Easter eggs and extras
+
 // Have every weapon at the same time without using cheats
 // TODO
 /* achievement(
@@ -591,20 +615,42 @@ achievement(
         )
 )
 
-// Easter eggs
+// win as Chip Hazard in 2p mode
+achievement(
+    title = "Mission Accomplished!",
+    points = 5, // TODO
+    description = "Win as Chip Hazard in 2 Players frag mode in any level",
+    trigger = is_2p_frag() &&
+        is_current_screen(ScreenLookup["chip_victory"]) &&
+        !is_previous_screen(ScreenLookup["chip_victory"])
+)
+
+// win as Chip Hazard in flag mode in every level
+for level in MultiplayerLevelLookup {
+    achievement(
+        title = "Mission Accomplished! " + MultiplayerLevelLookup[level], // TODO
+        points = 1,
+        description = "Win as Chip Hazard in 2 Players flag mode in " + MultiplayerLevelLookup[level],
+        trigger = is_2p_flag() &&
+            is_current_screen(ScreenLookup["chip_victory"]) &&
+            !is_previous_screen(ScreenLookup["chip_victory"]) &&
+            is_current_multiplayer_level(level)
+    )
+}
+
 achievement(
     title = "An Adventure Through the Heart of Our Most Dangerous Conflict", 
     points = 1, // TODO
     description = "Watch the Medal of Honor promotional video",
-    trigger = byte(ModeAddress) == 0 && ascii_string_equals(VideoAddress, "medal.str") && dword(VideoAddress) != prev(dword(VideoAddress))
+    trigger = ascii_string_equals(VideoAddress, "medal.str") && dword(VideoAddress) != prev(dword(VideoAddress))
 )
 
 // Rich presence
 rich_presence_conditional_display(cheats_enabled(), "Cheats enabled 🏴‍☠️")
 
-rich_presence_conditional_display(is_current_mode(1), "2P mode")
+rich_presence_conditional_display(byte(ModeAddress) == ModeLookup["2p"], "2p mode")
 
-rich_presence_conditional_display(is_current_mode(2), "Watching demo mode")
+rich_presence_conditional_display(byte(ModeAddress) == ModeLookup["demo"], "Watching demo mode")
 
 rich_presence_display("Level: {0} | ❤️: {1} | Difficulty: {2}",
     rich_presence_lookup("Level", byte(LevelAddress), LevelLookup),
