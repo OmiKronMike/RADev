@@ -493,7 +493,7 @@ for level in LevelLookup {
 // ***CHALLENGES***
 
 
-// level 1 gorgon
+// level 1 gorgon id 420127
 // kill all enemies
 /**
 * @deprecated
@@ -506,12 +506,21 @@ for level in LevelLookup {
     description = "Kill all enemies in " + LevelLookup[0] + " and complete the level",
     trigger = is_scenario() && byte(LevelStats("kills")) == 24 && prev(byte(LevelStats("kills"))) == 23
 ) */
+// level 1 gorgon
+achievement(
+    title = "[TBD] Gorgon challenge",
+    id = 420127,
+    points = 5,
+    description = "TBD",
+    trigger = level_challenge(0)
+)
     
 // level 2 dimensional temple
 // complete the level without killing any enemy
 // TESTED
 achievement(
     title = "The Gorgonites Are Peaceful. We Mean No Harm.",
+    id = 420128,
     points = 5,
     description = "Collect all keys in " + LevelLookup[1] + " without killing any enemy",
     trigger = level_challenge(1) && 
@@ -524,6 +533,7 @@ achievement(
 // TESTED
 achievement(
     title = "Punch It Is Desperate To Hold It!",
+    id = 420129,
     points = 5,
     description = "Reach the turret in " + LevelLookup[2] + " using only Punch It",
     //trigger = is_scenario() && no_shooting() && trigger_when(level_completed(2)) && disable_when(!is_current_screen(LevelScreen[2]) && !is_current_level(2), is_current_screen(LevelScreen[2]) && is_current_level(2))
@@ -542,13 +552,20 @@ achievement(
 )
 
 // level 4 spirit bog
-
-// TODO
+// TODO 420130
+achievement(
+    title = "[TBD] Spirit Bog challenge",
+    id = 420130,
+    points = 5, // TODO
+    description = "TDB",
+    trigger = level_challenge(3)
+)
 
 // level 5 canyon village
 // collect every key without jumping
 achievement(
     title = "Jump",
+    id = 420131,
     points = 5, // TODO
     description = "Collect all keys in " + LevelLookup[4] + " without jumping",
     trigger = level_challenge(4) && 
@@ -556,33 +573,74 @@ achievement(
         disable_when(byte(PlayerData("jump")) != 0, !is_current_screen(LevelScreen[4]))
 )
 
-// level 6 extras:
-// TODO
+// level 6 creepy caverns
+// TODO 420132
+achievement(
+    title = "[TBD] Creepy Caverns challenge",
+    id = 420132,
+    points = 5, // TODO
+    description = "TDB",
+    trigger = level_challenge(5)
+)
+// level 7 hall of patriots
+// TODO 420133
+achievement(
+    title = "[TBD] Hall of Patriots challenge",
+    id = 420133,
+    points = 5, // TODO
+    description = "TDB",
+    trigger = level_challenge(6)
+)
+// level 8 graveyard of war
+// TODO 420134
+achievement(
+    title = "[TBD] Graveyard of War challenge",
+    id = 420134,
+    points = 5, // TODO
+    description = "TDB",
+    trigger = level_challenge(7)
+)
+// level 9 nuclear mine
+// TODO 420135
+achievement(
+    title = "[TBD] Nuclear Mine challenge",
+    id = 420135,
+    points = 5, // TODO
+    description = "TDB",
+    trigger = level_challenge(8)
+)
+// level 10 launch center
+// TODO 420136
+achievement(
+    title = "[TBD] Launch Center challenge",
+    id = 420136,
+    points = 5, // TODO
+    description = "TDB",
+    trigger = level_challenge(9)
+)
+// level 11 ulhaden fier
+// TODO 420137
+achievement(
+    title = "[TBD] Ulhaden Fier challenge",
+    id = 420137,
+    points = 5, // TODO
+    description = "TDB",
+    trigger = level_challenge(10)
+)
+// level 12 garrison prime
+// TODO 420138
+achievement(
+    title = "[TBD] Garrison Prime challenge",
+    id = 420138,
+    points = 5, // TODO
+    description = "TDB",
+    trigger = level_challenge(11)
+)
 
-// level 7 extras:
-// TODO
-
-// level 8 extras:
-// TODO
-
-// level 9 extras:
-// TODO
-
-// level 10 extras:
-// TODO
-
-// level 11 extras:
-// TODO
-
-// level 12 extras:
-// TODO
-
-// level 13 extras:
-// TODO
-
-// level 14 extras:    
+// level 14 inner sanctum
 achievement(
     title = "No Problemo!",
+    id = 420140,
     points = 25, // TODO
     description = "Defeat Chip Hazard in Inner Sanctum without using the turret",
     trigger = level_challenge(13) &&
@@ -613,6 +671,7 @@ achievement(
 
 achievement(
     title = "You Never Have to Replace the Battery",
+    id = 420139,
     points = 5, // TODO
     description = "Have 9 lives on hard difficulty",
     trigger = is_scenario() && 
@@ -633,6 +692,7 @@ achievement(
 // win as Chip Hazard in 2p mode
 achievement(
     title = "Featuring Tommy Lee Jones",
+    id = 420141,
     points = 5, // TODO
     description = "Win as Chip Hazard in 2 Players frag mode in any level",
     trigger = is_2p_frag() &&
@@ -655,6 +715,7 @@ for level in MultiplayerLevelLookup {
 
 achievement(
     title = "An Adventure Through the Heart of Our Most Dangerous Conflict", 
+    id = 419685,
     points = 1, // TODO
     description = "Watch the Medal of Honor promotional video",
     trigger = ascii_string_equals(VideoAddress, "medal.str") && dword(VideoAddress) != prev(dword(VideoAddress))
