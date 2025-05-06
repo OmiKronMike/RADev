@@ -16,3 +16,17 @@ Duckstation 3D.lnk
 pcsx-redux.exe.lnk
 
 RALibretro.lnk
+
+mednafen/
+
+ghidra_scripts/
+
+ghidra_debugger_scripts
+
+psx/small-soldiers/ghidra/small-soldiers.rep/
+
+*.lock
+
+*.lock~
+
+gdb/
