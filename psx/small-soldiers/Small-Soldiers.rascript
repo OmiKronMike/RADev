@@ -117,20 +117,76 @@ LevelStatsOffsets = {
     "lives": 0x02e4, //8-bit
     "kills": 0x0388, //8-bit
     "weapon_cooldown": 0x03a0, //8-bit
-    "equipped_weapon": 0x03a4, //8-bit
+    "equipped_weapon": 0x03a4, //8-bit index
     "green_ammo": 0x03ac, //8-bit
     "blue_ammo": 0x03ae, //8-bit
-    "equipped_secondary": 0x03ce, //8-bit
+    "equipped_secondary": 0x03ce, //8-bit index
     "secrets": 0x03d0, //8-bit
     "talismans": 0x03d2, //8-bit
-    "mines": 0x03d6, //8-bit
-    "gorgonites": 0x03da, //8-bit
 }
+
+// +0x03d4 | [8-bit] secondary weapon slot 1
+// 0x18 = Orb (grenades)
+// 0x19 = Spirit Bomb (mines)
+// 0x1a = Earth Shaker (nuke)
+// 0x36 = Insaniac
+// 0x37 = Nibble
+// 0x38 = Ocula
+// 0x39 = Punch-it
+// 0x3a = Scratch-it
+// 0x3b = Slamfist
+// 0x3c = Stench
+// +0x03d6 | [8-bit] secondary weapon slot 1 ammo
+// +0x03d8 | [8-bit] secondary weapon slot 2
+// 0x00 see slot 1
+// +0x03da | [8-bit] secondary weapon slot 2 ammo
+// +0x03dc | [8-bit] secondary weapon slot 3
+// 0x00 see slot 1
+// +0x03de | [8-bit] secondary weapon slot 3 ammo
+// +0x03e0 | [8-bit] secondary weapon slot 4
+// 0x00 see slot 1
+// +0x03e2 | [8-bit] secondary weapon slot 4 ammo
+// +0x03e4 | [8-bit] secondary weapon slot 5
+// 0x00 see slot 1
+// +0x03e6 | [8-bit] secondary weapon slot 5 ammo
+// +0x03e8 | [8-bit] secondary weapon slot 6
+// 0x00 see slot 1
+// +0x03ea | [8-bit] secondary weapon slot 6 ammo
+SecondaryWeaponOffsets = {}
+for i in range(0, 5){
+    SecondaryWeaponOffsets[i] = {
+        "id": 0x03d4 + (i * 4), //8-bit
+        "ammo": 0x03d6 + (i * 4), //8-bit
+    }
+}
+SecondaryWeaponIds = {
+    "orb": 0x18,
+    "spirit_bomb": 0x19,
+    "earth_shaker": 0x1a,
+    "insaniac": 0x36,
+    "nibble": 0x37,
+    "ocula": 0x38,
+    "punch_it": 0x39,
+    "scratch_it": 0x3a,
+    "slamfist": 0x3b,
+    "stench": 0x3c,
+}
+
 PlayerDataOffsets = {
     "jump": 0x03d9, //8-bit
 }
+
 function LevelStats(stat) {
     return tbyte(LevelStatsPointer) + LevelStatsOffsets[stat]
+}
+function SecondaryWeaponData(weapon, data) {
+    return tbyte(LevelStatsPointer) + SecondaryWeaponOffsets[weapon][data]
+}
+function EquippedSecondaryWeaponId() {
+    return tbyte(LevelStatsPointer) + SecondaryWeaponOffsets[0]["id"] + byte(LevelStats("equipped_secondary")) * 4
+}
+function EquippedSecondaryWeaponAmmo() {
+    return tbyte(LevelStatsPointer) + SecondaryWeaponOffsets[0]["ammo"] + byte(LevelStats("equipped_secondary")) * 4
 }
 function PlayerData(stat) {
     return tbyte(LevelStats("player_data")) + PlayerDataOffsets[stat]
@@ -461,10 +517,25 @@ function offsets_list() {
     return list
 }
 achievement(
-    title = "[DEBUG]",
+    title = "[DEBUG] level stats",
     description = "Level stats",
     points = 0,
-    trigger = offsets_list() && always_false()
+    trigger = offsets_list() && 
+    byte(ModeAddress) > 2 // should always be false
+)
+function secondary_weapons_list() {
+    list = true
+    for weapon in SecondaryWeaponOffsets {
+        list = list && byte(SecondaryWeaponData(weapon, "id")) == 0 && byte(SecondaryWeaponData(weapon, "ammo")) == 0
+    }
+    return list
+}
+achievement(
+    title = "[DEBUG] secondary weapons",
+    description = "Secondary weapons",
+    points = 0,
+    trigger = secondary_weapons_list() &&
+    byte(ModeAddress) > 2 // should always be false
 )
 
 //********************
@@ -541,7 +612,7 @@ achievement(
     title = "The Gorgonites Are Peaceful. We Mean No Harm.",
     id = 420128,
     points = 5,
-    description = "Collect all keys in " + LevelLookup[1] + " without killing any enemy",
+    description = "Collect all keys in " + LevelLookup[1] + " without killing any enemies",
     trigger = level_challenge(1) && 
         byte(LevelStats("kills")) == 0 &&
         trigger_when(collected_keys(["green_key", "red_key", "yellow_key", "blue_key"])) 
@@ -559,12 +630,15 @@ achievement(
     //trigger = is_scenario() && level_completed(2) && no_shooting()
     trigger = level_challenge(2) &&
         disable_when(
-            comparison = byte(LevelStats("weapon_cooldown")) > 0, // disable when shooting with any crossbow
+            comparison = byte(LevelStats("weapon_cooldown")) > 0, // disable when using any primary weapon
             until = !is_current_screen(LevelScreen[2])
         ) &&
         disable_when(
-            comparison = byte(LevelStats("mines")) < prev(byte(LevelStats("mines"))) && // disable when using mines
-                byte(LevelStats("lives")) == prev(byte(LevelStats("lives"))), // check if we didn't die, because when you die you lose everything
+            comparison =
+                (byte(EquippedSecondaryWeaponId()) != SecondaryWeaponIds["punch_it"] && // disable when using any other secondary weapon
+                // ! fix when 1 ammo left, because as soon as it gets to 0, equipped id changes
+                byte(EquippedSecondaryWeaponAmmo()) < prev(byte(EquippedSecondaryWeaponAmmo()))), //&&
+                //byte(LevelStats("lives")) == prev(byte(LevelStats("lives"))), // check if we didn't die, because when you die you lose everything in hard mode
             until = !is_current_screen(LevelScreen[2])
         ) &&
         /*
@@ -580,7 +654,7 @@ achievement(
     title = "[TBD] Spirit Bog challenge",
     id = 420130,
     points = 5, // TODO
-    description = "TDB",
+    description = "TBD",
     trigger = level_challenge(3)
 )
 
@@ -602,7 +676,7 @@ achievement(
     title = "[TBD] Creepy Caverns challenge",
     id = 420132,
     points = 5, // TODO
-    description = "TDB",
+    description = "TBD",
     trigger = level_challenge(5)
 )
 // level 7 space ship
@@ -611,7 +685,7 @@ achievement(
     title = "[TBD] Space Ship challenge",
     id = 420133,
     points = 5, // TODO
-    description = "TDB",
+    description = "TBD",
     trigger = level_challenge(6)
 )
 // level 8 hall of patriots
@@ -638,7 +712,7 @@ achievement(
     title = "[TBD] Graveyard of War challenge",
     id = 420135,
     points = 5, // TODO
-    description = "TDB",
+    description = "TBD",
     trigger = level_challenge(8)
 )
 // level 10 nuclear mine
@@ -647,7 +721,7 @@ achievement(
     title = "[TBD] Nuclear Mine challenge",
     id = 420136,
     points = 5, // TODO
-    description = "TDB",
+    description = "TBD",
     trigger = level_challenge(9)
 )
 // level 11 launch center
@@ -656,7 +730,7 @@ achievement(
     title = "[TBD] Launch Center challenge",
     id = 420137,
     points = 5, // TODO
-    description = "TDB",
+    description = "TBD",
     trigger = level_challenge(10)
 )
 // level 12 ulhaden fier
@@ -665,7 +739,7 @@ achievement(
     title = "[TBD] Ulhaden Fier challenge",
     id = 420138,
     points = 5, // TODO
-    description = "TDB",
+    description = "TBD",
     trigger = level_challenge(11)
 )
 
@@ -675,7 +749,7 @@ achievement(
     title = "[TBD] Garrison Prime challenge",
     id = 420139,
     points = 5, // TODO
-    description = "TDB",
+    description = "TBD",
     trigger = level_challenge(12)
 )
 
