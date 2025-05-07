@@ -1,6 +1,10 @@
 // Small Soldiers
 // #ID = 18564
 
+//****************************
+// * ADDRESSES
+//****************************
+
 // Difficulty
 DifficultyAddress = 0x0393C5
 DifficultyLookup = {
@@ -14,6 +18,7 @@ CheatInvincibilityAddress = 0x0393d8
 CheatAllWeaponsAddress = 0x0393d9
 CheatUnlimitedAmmoAddress = 0x0393da
 
+// Summary
 SummaryLivesAddress = 0x0393ce
 SummaryKillsAddress = 0x0393dc
 TriesAddress = 0x0393e3
@@ -86,7 +91,7 @@ LevelSecrets = {
     10: [4,1],
     11: [2,2],
     12: [2,1],
-    13: [1,0],
+    13: [2,0],
 }
 
 Timer = 0x09c240
@@ -165,12 +170,14 @@ LevelScreen = {
 
 BriefingPointer = 0x03b244
 
-
 VideoAddress = 0x1FFE79
 
 
 
-// ***UTILITY FUNCTIONS***
+// ****************************
+// * FUNCTIONS
+// ****************************
+
 function is_briefing_screen(level) {
     return ascii_string_equals(tbyte(BriefingPointer), "data\\screen\\brief\\lev" + level)
 }
@@ -243,7 +250,10 @@ function level_challenge(level) {
         is_current_screen(LevelScreen[level])
 }
 
-// *** SET DATA ***
+//****************************
+// * SET DATA
+//****************************
+
 IDs = {
     "progression": {
         0: 419778,
@@ -421,7 +431,10 @@ Points = {
     "no_death": [5,5,5,5,5, 5,5,5,5,5, 5,5,5,5],
 }
 
-// *** DEBUGGING ***
+//********************
+// * DEBUG UTILS
+//********************
+
 // list of every offset in pointer so we can right click it to jump in memory inspector
 function offsets_list() {
     list = true
@@ -431,14 +444,16 @@ function offsets_list() {
     return list
 }
 achievement(
-    title = "[VOID]",
-    description = "[VOID]",
-    id = 419820,
+    title = "[DEBUG]",
+    description = "Level stats",
     points = 0,
-    trigger = tally(100, byte(PlayerData("jump")) == 2) && byte(LevelStats("kills")) == 0 
+    trigger = offsets_list()
 )
 
-// *** ACHIEVEMENTS ***
+//********************
+// * PROGRESSION ACHIEVEMENTS
+//********************
+
 for level in LevelLookup {
 
     progressionType = "progression"
@@ -474,24 +489,11 @@ for level in LevelLookup {
         description = "Collect all secrets and talismans in " + LevelLookup[level],
         trigger = is_scenario() && is_current_level(level) && collected_secrets(level)
     )
-
-    // No-death
-    // Note: No-death is always achieved on last level because if you die the boss returns to full health
-    /**
-    * @deprecated
-    */
-    /*if(level != length(LevelLookup)-1) {
-        achievement(
-            title = Titles["no_death"][level],
-            points = Points["no_death"][level],
-            description = "Complete " + LevelLookup[level] + " without dying",
-            trigger = is_scenario() && level_completed(level) && byte(TriesAddress) == 1
-        )
-    }*/
 }
 
-// ***CHALLENGES***
-
+//*********************
+// * CHALLENGE ACHIEVEMENTS
+//*********************
 
 // level 1 gorgon id 420127
 // kill all enemies
@@ -517,7 +519,7 @@ achievement(
     
 // level 2 dimensional temple
 // complete the level without killing any enemy
-// TESTED
+// *TESTED
 achievement(
     title = "The Gorgonites Are Peaceful. We Mean No Harm.",
     id = 420128,
@@ -548,6 +550,10 @@ achievement(
                 byte(LevelStats("lives")) == prev(byte(LevelStats("lives"))), // check if we didn't die, because when you die you lose everything
             until = !is_current_screen(LevelScreen[2])
         ) &&
+        /*
+        ! it's triggering at the start of the level because it's not 0. 
+        ! Probably a pointer to the teleporter from where you start
+        */
         trigger_when(byte(LevelStats("vehicle")) != 0)
 )
 
@@ -668,12 +674,13 @@ achievement(
             !is_current_screen(LevelScreen[13])
         ) && // trigger on kill count
         trigger_when(
-            byte(LevelStats("kills")) == 1 &&
-            prev(byte(LevelStats("kills"))) == 0
+            byte(LevelStats("kills")) == prev(byte(LevelStats("kills"))) + 1
         )
 )
 
-// ***Easter eggs and extras
+//*********************
+// * MISC ACHIEVEMENTS
+//*********************
 
 // Have every weapon at the same time without using cheats
 // TODO
@@ -690,7 +697,6 @@ achievement(
 
 achievement(
     title = "You Never Have to Replace the Battery",
-    id = 420139,
     points = 5, // TODO
     description = "Have 9 lives on hard difficulty",
     trigger = is_scenario() && 
@@ -740,7 +746,11 @@ achievement(
     trigger = ascii_string_equals(VideoAddress, "medal.str") && dword(VideoAddress) != prev(dword(VideoAddress))
 )
 
-// Rich presence
+
+//*********************
+// * RICH PRESENCE
+//*********************
+
 rich_presence_conditional_display(cheats_enabled(), "Cheats enabled 🏴‍☠️")
 
 rich_presence_conditional_display(byte(ModeAddress) == ModeLookup["2p"], "2p mode")
@@ -752,6 +762,10 @@ rich_presence_display("Level: {0} | ❤️: {1} | Difficulty: {2}",
     rich_presence_value("Number", byte(LevelStats("lives"))-1),
     rich_presence_lookup("Difficulty", byte(DifficultyAddress), DifficultyLookup)
 )
+
+//*********************
+// * LEADERBOARD
+//*********************
 
 for level in LevelLookup {
     leaderboard(
