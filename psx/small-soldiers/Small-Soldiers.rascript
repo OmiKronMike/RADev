@@ -21,6 +21,8 @@ CheatUnlimitedAmmoAddress = 0x0393da
 // Summary
 SummaryLivesAddress = 0x0393ce
 SummaryKillsAddress = 0x0393dc
+SummarySecretsAddress = 0x0393e1
+SummarySecretsTotalAddress = 0x0393e2
 TriesAddress = 0x0393e3
 
 // Mode
@@ -170,9 +172,14 @@ LevelScreen = {
 
 BriefingPointer = 0x03b244
 
+/*[128-bit] ASCII Title of video currently played
+- ea_logo.str (initial loading)
+- m_final.str (initial loading)
+- m_intro.str (campaign intro video)
+- end.str (after final boss)
+- credits.str (credits, both endgame and from options)
+- medal.str (Medal of Honor promotional video)*/
 VideoAddress = 0x1FFE79
-
-
 
 // ****************************
 // * FUNCTIONS
@@ -190,6 +197,14 @@ function is_previous_screen(screen) {
 function is_prior_screen(screen) {
     return prior(tbyte(ScreenAddress)) == screen
 }
+function is_level_screen() {
+    condition = false
+    for screen in LevelScreen {
+        condition = condition || is_current_screen(LevelScreen[screen])
+    }
+    return condition
+}
+
 function is_1P() => byte(ModeAddress) == ModeLookup["campaign"]
 function is_2p_frag() => byte(ModeAddress) == ModeLookup["2p"] && byte(MultiPlayerModeAddress) == MultiPlayerModeLookup["frag"]
 function is_2p_flag() => byte(ModeAddress) == ModeLookup["2p"] && byte(MultiPlayerModeAddress) == MultiPlayerModeLookup["flag"]
@@ -201,12 +216,14 @@ function cheats_enabled() => byte(CheatInvincibilityAddress) == 1 || byte(CheatA
 function is_scenario() => is_1P() && no_cheats()
 function is_campaign() => is_1P() && no_cheats() && no_passwords()
 
+function is_playing_video(video) => ascii_string_equals(VideoAddress, video)
+
 function last_level_completed() {
     return 
         is_1P() && no_passwords() && no_cheats() &&
         is_current_level(length(LevelLookup)-1) &&
         //last level doesn't have a summary screen, so we check if the end video is playing    
-        ascii_string_equals(VideoAddress, "end.str") &&
+        is_playing_video("end.str") &&
         dword(VideoAddress) != prev(dword(VideoAddress))
 }
 
@@ -447,7 +464,7 @@ achievement(
     title = "[DEBUG]",
     description = "Level stats",
     points = 0,
-    trigger = offsets_list()
+    trigger = offsets_list() && always_false()
 )
 
 //********************
@@ -743,8 +760,28 @@ achievement(
     id = 419685,
     points = 1, // TODO
     description = "Watch the Medal of Honor promotional video",
-    trigger = ascii_string_equals(VideoAddress, "medal.str") && dword(VideoAddress) != prev(dword(VideoAddress))
+    trigger = is_playing_video("medal.str") && dword(VideoAddress) != prev(dword(VideoAddress))
 )
+
+//*********************
+// * LEADERBOARDS
+//*********************
+
+for level in LevelLookup {
+    leaderboard(
+        title = "Best Time In " + LevelLookup[level],
+        description = "Complete " + LevelLookup[level] + " in the fastest time possible on any difficulty",
+        start = is_scenario() && 
+            is_current_level(level) && 
+            is_current_screen(LevelScreen[level]) && 
+            !is_previous_screen(LevelScreen[level]),
+        cancel = is_current_screen(ScreenLookup["main"]),
+        submit = level_completed(level),
+        value = dword(Timer) * 2, // 30fps
+        format = "FRAMES",
+        lower_is_better = true
+    )
+}
 
 
 //*********************
@@ -753,29 +790,69 @@ achievement(
 
 rich_presence_conditional_display(cheats_enabled(), "Cheats enabled 🏴‍☠️")
 
-rich_presence_conditional_display(byte(ModeAddress) == ModeLookup["2p"], "2p mode")
+rich_presence_conditional_display(
+    is_current_screen(ScreenLookup["main"]) ||
+    is_current_screen(ScreenLookup["2p"]) ||
+    is_current_screen(ScreenLookup["password"]) ||
+    is_current_screen(ScreenLookup["options_main"]) ||
+    is_current_screen(ScreenLookup["options_controller"]) ||
+    is_current_screen(ScreenLookup["options_analog"]) ||
+    is_current_screen(ScreenLookup["options_sound"]),
+    "Navigating menus"
+)
+
+rich_presence_conditional_display(
+    is_playing_video("m_intro.str"),
+    "Watching intro video"
+)
+rich_presence_conditional_display(
+    is_playing_video("end.str"),
+    "Watching end video"
+)
+rich_presence_conditional_display(
+    is_playing_video("credits.str"),
+    "Watching credits video"
+)
+
+rich_presence_conditional_display(
+    byte(ModeAddress) == ModeLookup["2p"] && 
+    byte(MultiPlayerModeAddress) == MultiPlayerModeLookup["frag"], 
+    "2 Players frag mode 💥"
+)
+rich_presence_conditional_display(
+    byte(ModeAddress) == ModeLookup["2p"] && 
+    byte(MultiPlayerModeAddress) == MultiPlayerModeLookup["flag"], 
+    "2 Players flag mode 🎌"
+)
 
 rich_presence_conditional_display(byte(ModeAddress) == ModeLookup["demo"], "Watching demo mode")
 
-rich_presence_display("Level: {0} | ❤️: {1} | Difficulty: {2}",
+rich_presence_conditional_display(
+    is_level_screen(),
+    "{0} (🚩: {1}) - ❤️: {2} | ⚙️: {3} | ☠️: {4} | 💍: {5} | 🔎: {6}",
     rich_presence_lookup("Level", byte(LevelAddress), LevelLookup),
+    rich_presence_value("Number", byte(LevelAddress)+1),
     rich_presence_value("Number", byte(LevelStats("lives"))-1),
-    rich_presence_lookup("Difficulty", byte(DifficultyAddress), DifficultyLookup)
+    rich_presence_lookup("Difficulty", byte(DifficultyAddress), DifficultyLookup),
+    rich_presence_value("Number", byte(LevelStats("kills"))),
+    rich_presence_value("Number", byte(LevelStats("talismans"))),
+    rich_presence_value("Number", byte(LevelStats("secrets")))
 )
 
-//*********************
-// * LEADERBOARD
-//*********************
+//summary screen
+rich_presence_conditional_display(
+    is_current_screen(ScreenLookup["summary"]),
+    "{0} (🚩: {1}) Quest Complete! - ❤️: {2} | ⚙️ {3} | ☠️: {4} | 🔁: {5} | 💍: {6} | 🔎: {7}/{8}",
+    rich_presence_lookup("Level", byte(LevelAddress)-1, LevelLookup),
+    rich_presence_value("Number", byte(LevelAddress)),
+    rich_presence_value("Number", byte(SummaryLivesAddress)-1),
+    rich_presence_lookup("Difficulty", byte(DifficultyAddress), DifficultyLookup),
+    rich_presence_value("Number", byte(SummaryKillsAddress)),
+    rich_presence_value("Number", byte(TriesAddress)),
+    rich_presence_value("Number", byte(LevelStats("talismans"))),
+    rich_presence_value("Number", byte(SummarySecretsAddress)),
+    rich_presence_value("Number", byte(SummarySecretsTotalAddress))
+)
 
-for level in LevelLookup {
-    leaderboard(
-        title = "Best Time In " + LevelLookup[level],
-        description = "Complete " + LevelLookup[level] + " in the fastest time possible on any difficulty",
-        start = is_scenario() && is_current_level(level) && is_current_screen(LevelScreen[level]) && !is_previous_screen(LevelScreen[level]),
-        cancel = is_current_screen(ScreenLookup["main"]),
-        submit = level_completed(level),
-        value = dword(Timer) * 2, // 30fps
-        format = "FRAMES",
-        lower_is_better = true
-    )
-}
+rich_presence_display("Loading...")
+
