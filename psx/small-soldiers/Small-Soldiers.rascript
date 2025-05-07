@@ -582,59 +582,78 @@ achievement(
     description = "TDB",
     trigger = level_challenge(5)
 )
-// level 7 hall of patriots
+// level 7 space ship
 // TODO 420133
 achievement(
-    title = "[TBD] Hall of Patriots challenge",
+    title = "[TBD] Space Ship challenge",
     id = 420133,
     points = 5, // TODO
     description = "TDB",
     trigger = level_challenge(6)
 )
-// level 8 graveyard of war
+// level 8 hall of patriots
 // TODO 420134
+// kill 100 enemies using walker or turret
 achievement(
-    title = "[TBD] Graveyard of War challenge",
+    title = "Commandos Are Everywhere!",
     id = 420134,
     points = 5, // TODO
-    description = "TDB",
-    trigger = level_challenge(7)
+    description = "Kill 100 enemies using the turret or walker in a single session in " + LevelLookup[7],
+    trigger = level_challenge(7) &&
+        measured(
+            comparison = tally(
+                    3, // TODO choose a good value
+                    byte(LevelStats("kills")) == prev(byte(LevelStats("kills"))) + 1 && 
+                    byte(LevelStats("vehicle")) != 0 // add hits only when kill count increase while mounted
+                ), // reset when leaving the level
+            when = level_challenge(7)
+        )
 )
-// level 9 nuclear mine
+// level 9 graveyard of war
 // TODO 420135
 achievement(
-    title = "[TBD] Nuclear Mine challenge",
+    title = "[TBD] Graveyard of War challenge",
     id = 420135,
     points = 5, // TODO
     description = "TDB",
     trigger = level_challenge(8)
 )
-// level 10 launch center
+// level 10 nuclear mine
 // TODO 420136
 achievement(
-    title = "[TBD] Launch Center challenge",
+    title = "[TBD] Nuclear Mine challenge",
     id = 420136,
     points = 5, // TODO
     description = "TDB",
     trigger = level_challenge(9)
 )
-// level 11 ulhaden fier
+// level 11 launch center
 // TODO 420137
 achievement(
-    title = "[TBD] Ulhaden Fier challenge",
+    title = "[TBD] Launch Center challenge",
     id = 420137,
     points = 5, // TODO
     description = "TDB",
     trigger = level_challenge(10)
 )
-// level 12 garrison prime
+// level 12 ulhaden fier
 // TODO 420138
 achievement(
-    title = "[TBD] Garrison Prime challenge",
+    title = "[TBD] Ulhaden Fier challenge",
     id = 420138,
     points = 5, // TODO
     description = "TDB",
     trigger = level_challenge(11)
+)
+
+// level 13 garrison prime
+// TODO 420139
+achievement(
+    title = "[TBD] Garrison Prime challenge",
+    id = 420139,
+    points = 5, // TODO
+    description = "TDB",
+    trigger = level_challenge(12)
 )
 
 // level 14 inner sanctum
