@@ -32,8 +32,8 @@ ModeLookup = {
     "2p": 1,
     "demo": 2
 }
-MultiPlayerModeAddress = 0x0393cb
-MultiPlayerModeLookup = {
+MultiplayerModeAddress = 0x0393cb
+MultiplayerModeLookup = {
     "frag": 0,
     "flag": 1
 }
@@ -268,8 +268,8 @@ function is_level_screen() {
 }
 
 function is_1P() => byte(ModeAddress) == ModeLookup["campaign"]
-function is_2p_frag() => byte(ModeAddress) == ModeLookup["2p"] && byte(MultiPlayerModeAddress) == MultiPlayerModeLookup["frag"]
-function is_2p_flag() => byte(ModeAddress) == ModeLookup["2p"] && byte(MultiPlayerModeAddress) == MultiPlayerModeLookup["flag"]
+function is_2p_frag() => byte(ModeAddress) == ModeLookup["2p"] && byte(MultiplayerModeAddress) == MultiplayerModeLookup["frag"]
+function is_2p_flag() => byte(ModeAddress) == ModeLookup["2p"] && byte(MultiplayerModeAddress) == MultiplayerModeLookup["flag"]
 function is_hard() => byte(DifficultyAddress) == 2
 function has_level_changed() => byte(LevelAddress) != prev(byte(LevelAddress))
 function no_passwords() => disable_when(is_current_screen(ScreenLookup["password"]) && has_level_changed(), is_current_screen(ScreenLookup["main"]))
@@ -315,12 +315,19 @@ function collected_secrets(level) {
         prev_total_secrets == target_secrets - 1
 }
 
-function collected_keys(keys) {
-    conditions = true
-    for key in keys {
-        conditions = conditions && (byte(LevelData(key)) == 1 || byte(LevelData(key)) == 2)
-    }
-    return conditions
+/* we use bitcount because the value when collected can either be 1 or 2 (blinking icon, when picked up or used) 
+        so it's always bitcount 1 */
+function collected_keys_count() {
+    return bitcount(LevelData("green_key")) +
+        bitcount(LevelData("red_key")) +
+        bitcount(LevelData("yellow_key")) +
+        bitcount(LevelData("blue_key"))
+}
+function prev_collected_keys_count() {
+    return prev(bitcount(LevelData("green_key"))) +
+        prev(bitcount(LevelData("red_key"))) +
+        prev(bitcount(LevelData("yellow_key"))) +
+        prev(bitcount(LevelData("blue_key")))
 }
 
 function level_challenge(level) {
@@ -621,7 +628,7 @@ achievement(
     description = "Collect all keys in " + LevelLookup[1] + " without killing any enemies",
     trigger = level_challenge(1) && 
         byte(LevelStats("kills")) == 0 &&
-        trigger_when(collected_keys(["green_key", "red_key", "yellow_key", "blue_key"])) 
+        trigger_when(collected_keys_count() == 4)// && collected_keys_count() > prev_collected_keys_count())
 )
 
 // level 3 floating fortress
@@ -667,12 +674,12 @@ achievement(
 // level 5 canyon village
 // collect every key without jumping
 achievement(
-    title = "Jump",
+    title = "Jump", // TODO
     id = 420131,
     points = 5, // TODO
     description = "Collect all keys in " + LevelLookup[4] + " without jumping",
     trigger = level_challenge(4) && 
-        trigger_when(collected_keys(["green_key", "red_key", "yellow_key"])) &&
+        trigger_when(collected_keys_count() == 3 && collected_keys_count() > prev_collected_keys_count()) &&
         disable_when(byte(PlayerData("jump")) != 0, !is_current_screen(LevelScreen[4]))
 )
 
@@ -811,9 +818,19 @@ achievement(
         )
 )
 
+/*achievement(
+    title = "Standard Issue Is Insufficient",
+    points = 5, // TODO
+    description = "Have at least 1 ammo at the same time on HARD difficulty for Rebound, Star bolt, Big Blast, Spirit Bomb, Orb and Earth Shaker",
+    trigger = is_scenario() && 
+        is_hard() && 
+        byte(LevelStats("green_ammo")) > 0 &&
+        byte(LevelStats("blue_ammo")) > 0 &&
+        byte(LevelStats("equipped_secondary")) == 0 && // Rebound*/
+
 // win as Chip Hazard in 2p mode
 achievement(
-    title = "Featuring Tommy Lee Jones",
+    title = "Search out the Gorgonites and frag 'em all", //movie transcript
     id = 420141,
     points = 5, // TODO
     description = "Win as Chip Hazard in 2 Players frag mode in any level",
@@ -822,10 +839,18 @@ achievement(
         !is_previous_screen(ScreenLookup["chip_victory"])
 )
 
+FlagModeTitles = { // all from movie transcript
+    1: "Chip Hazard, Reporting for Duty!",
+    2: "There Will Be No Mercy.",
+    3: "You Are Programmed to Lose",
+    4: "Meet Death With Honor, Coward.",
+    5: "It's a Small World After All.",
+    6: "Commandos, Attack!"
+}
 // win as Chip Hazard in flag mode in every level
 for level in MultiplayerLevelLookup {
     achievement(
-        title = "Mission Accomplished! " + MultiplayerLevelLookup[level], // TODO
+        title = FlagModeTitles[level],
         points = 1,
         description = "Win as Chip Hazard in 2 Players flag mode in " + MultiplayerLevelLookup[level],
         trigger = is_2p_flag() &&
@@ -894,15 +919,19 @@ rich_presence_conditional_display(
     "Watching credits video"
 )
 
+MultiplayerLevelDictionary = rich_presence_lookup("Multiplayer Level", byte(MultiplayerLevelAddress), MultiplayerLevelLookup)
 rich_presence_conditional_display(
     byte(ModeAddress) == ModeLookup["2p"] && 
-    byte(MultiPlayerModeAddress) == MultiPlayerModeLookup["frag"], 
-    "2 Players frag mode 💥"
+    byte(MultiplayerModeAddress) == MultiplayerModeLookup["frag"], 
+    "2 Players frag mode 💥 | 🚩: {0}",
+    MultiplayerLevelDictionary,
+    rich_presence_value("Number", byte(MultiplayerLevelAddress)+1)
 )
 rich_presence_conditional_display(
     byte(ModeAddress) == ModeLookup["2p"] && 
-    byte(MultiPlayerModeAddress) == MultiPlayerModeLookup["flag"], 
-    "2 Players flag mode 🎌"
+    byte(MultiplayerModeAddress) == MultiplayerModeLookup["flag"], 
+    "2 Players flag mode 🎌 | 🚩: {0}",
+    MultiplayerLevelDictionary
 )
 
 rich_presence_conditional_display(byte(ModeAddress) == ModeLookup["demo"], "Watching demo mode")
@@ -936,5 +965,6 @@ rich_presence_conditional_display(
     rich_presence_value("Number", byte(SummarySecretsTotalAddress))
 )
 
+//fallback
 rich_presence_display("Loading...")
 
