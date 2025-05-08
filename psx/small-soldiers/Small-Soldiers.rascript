@@ -95,6 +95,12 @@ LevelSecrets = {
     12: [2,1],
     13: [2,0],
 }
+LevelSecretsLookup = {}
+LevelTalismansLookup = {}
+for level in LevelSecrets {
+    LevelSecretsLookup[level] = "" + LevelSecrets[level][0]
+    LevelTalismansLookup[level] = "" + LevelSecrets[level][1]
+}
 
 Timer = 0x09c240
 
@@ -903,20 +909,22 @@ rich_presence_conditional_display(byte(ModeAddress) == ModeLookup["demo"], "Watc
 
 rich_presence_conditional_display(
     is_level_screen(),
-    "{0} (🚩: {1}) - ❤️: {2} | ⚙️: {3} | ☠️: {4} | 💍: {5} | 🔎: {6}",
+    "Playing | 🚩: {1} - {0} | ❤️: {2} | ⚙️: {3} | ☠️: {4} | 🏆: {5}/{6} | 🔎: {7}/{8}",
     rich_presence_lookup("Level", byte(LevelAddress), LevelLookup),
     rich_presence_value("Number", byte(LevelAddress)+1),
     rich_presence_value("Number", byte(LevelStats("lives"))-1),
     rich_presence_lookup("Difficulty", byte(DifficultyAddress), DifficultyLookup),
     rich_presence_value("Number", byte(LevelStats("kills"))),
     rich_presence_value("Number", byte(LevelStats("talismans"))),
-    rich_presence_value("Number", byte(LevelStats("secrets")))
+    rich_presence_lookup("Talismans", byte(LevelAddress), LevelTalismansLookup),
+    rich_presence_value("Number", byte(LevelStats("secrets"))),
+    rich_presence_lookup("Secrets", byte(LevelAddress), LevelSecretsLookup)
 )
 
 //summary screen
 rich_presence_conditional_display(
     is_current_screen(ScreenLookup["summary"]),
-    "{0} (🚩: {1}) Quest Complete! - ❤️: {2} | ⚙️ {3} | ☠️: {4} | 🔁: {5} | 💍: {6} | 🔎: {7}/{8}",
+    "Quest Complete! | 🚩: {1} - {0} | ❤️: {2} | ⚙️ {3} | ☠️: {4} | 🔁: {5} | 🏆: {6}/{7} | 🔎: {7}/{8}",
     rich_presence_lookup("Level", byte(LevelAddress)-1, LevelLookup),
     rich_presence_value("Number", byte(LevelAddress)),
     rich_presence_value("Number", byte(SummaryLivesAddress)-1),
